@@ -15,14 +15,15 @@ Ableton Live can switch the Push 2 back to a stiffer pad setting when you change
 
 ## Install
 
-1. On this page, click the green **Code** button, then **Download ZIP**.
+1. Go to the [Releases page](../../releases/latest) and download the **Source code (zip)** (or click the green **Code** button on the main page, then **Download ZIP**).
 2. Open the downloaded ZIP to unpack it, and move the folder somewhere permanent, like Documents.
 
 ## Use
 
 1. Open Ableton Live with your Push 2 connected.
 2. In the folder, double-click **Start_Push2_Fix.command**.
-   - The first time, macOS may say it can't be opened. Right-click the file, choose **Open**, then **Open** again.
+   - The first time, macOS will block it because it's a downloaded file. Click **Done** (don't move it to the Trash), then open **System Settings** (**System Preferences** on older macOS) → **Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to the message about `Start_Push2_Fix.command`. Enter your password if asked, then click **Open**. You only need to do this once.
+   - On some older versions of macOS, right-clicking the file and choosing **Open** works instead.
    - The first run sets itself up, which takes about a minute.
 3. A Terminal window opens and prints that it applied the "regular" setting. **Leave it open** while you use Ableton. Close the window to stop it.
 
