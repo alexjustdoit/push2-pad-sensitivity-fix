@@ -47,7 +47,7 @@ Press **Ctrl+C** to stop. Stopping doesn't undo anything on the Push; the last s
 | Command | What it does |
 |---|---|
 | `./venv/bin/python push2_pad_fix.py` | Normal use: hold all pads on "regular" |
-| `./venv/bin/python push2_pad_fix.py --monitor` | Live readout in Terminal of every pad hit, e.g. `pad 36 velocity 18` (pad = MIDI note number, velocity 1-127). Handy for seeing how light a touch registers |
+| `./venv/bin/python push2_pad_fix.py --monitor` | Live readout in Terminal of every pad hit, e.g. `pad 36 (row 1 from bottom, col 1) velocity 18` (velocity 1-127). Handy for seeing how light a touch registers. Touching an encoder or the touch strip also sends a note, shown as `NOT A PAD`. Very low velocities (1-5) can be inaudible, so a pad may show up here without making sound |
 | `./venv/bin/python push2_pad_fix.py --list` | List the MIDI ports the Mac can see, then exit. Use it if the Push isn't found |
 | `./venv/bin/python push2_pad_fix.py --reset` | Send Live's own threshold values (33/31) once, then exit. Undoes `--t0` |
 
@@ -56,7 +56,7 @@ Press **Ctrl+C** to stop. Stopping doesn't undo anything on the Push; the last s
 | Option | Default | Meaning |
 |---|---|---|
 | `--setting 0\|1\|2` | `0` | Pad preset: 0 regular (most sensitive), 1 reduced, 2 low |
-| `--monitor` | off | Print each pad note-on (pad number and velocity) |
+| `--monitor` | off | Print each pad note-on (pad number, position and velocity); other touches are labeled `NOT A PAD` |
 | `--list` | | Show MIDI ports and exit |
 | `--reset` | | Send Live's threshold values once and exit |
 | `--t0 N` | off | **Experimental.** Override pad parameter 0 (Live sends 33) |

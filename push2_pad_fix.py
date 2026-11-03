@@ -43,6 +43,14 @@ def apply_thresholds(out_port, t0, t1, cpmin, cpmax):
     out_port.send(mido.Message("sysex", data=data))
 
 
+def describe_note(msg):
+    # Pads are notes 36-99 (36 = bottom left); other note-ons are encoder/touch strip touches.
+    if 36 <= msg.note <= 99:
+        row, col = divmod(msg.note - 36, 8)
+        return f"  pad {msg.note} (row {row + 1} from bottom, col {col + 1}) velocity {msg.velocity}"
+    return f"  NOT A PAD: note {msg.note} (encoder or touch strip touch) value {msg.velocity}"
+
+
 def apply(out_port, setting, quiet=False):
     # scene 0, track 0 = all pads
     out_port.send(mido.Message("sysex", data=SYSEX_HEADER + [SELECT_PAD_SETTINGS, 0, 0, setting]))
@@ -108,7 +116,7 @@ def main():
                 if in_port:
                     for msg in in_port.iter_pending():
                         if args.monitor and msg.type == "note_on" and msg.velocity > 0:
-                            print(f"  pad {msg.note} velocity {msg.velocity}", flush=True)
+                            print(describe_note(msg), flush=True)
                         if (msg.type == "control_change" and msg.control in RESET_CONTROLS and msg.value == 0):
                             due = 0.15
                         elif msg.type == "pitchwheel" and msg.pitch == 0:
