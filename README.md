@@ -47,6 +47,7 @@ Press **Ctrl+C** to stop. Stopping doesn't undo anything on the Push; the last s
 | Command | What it does |
 |---|---|
 | `./venv/bin/python push2_pad_fix.py` | Normal use: hold all pads on "regular" |
+| `./venv/bin/python push2_pad_fix.py --protect` | Keep Live's protection on pads that shouldn't fire by accident, but make everything one step more sensitive than stock (see below) |
 | `./venv/bin/python push2_pad_fix.py --monitor` | Live readout in Terminal of every pad hit, e.g. `pad 36 (row 1 from bottom, col 1) velocity 18` (velocity 1-127). Handy for seeing how light a touch registers. Touching an encoder or the touch strip also sends a note, shown as `NOT A PAD`. Very low velocities (1-5) can be inaudible, so a pad may show up here without making sound |
 | `./venv/bin/python push2_pad_fix.py --list` | List the MIDI ports the Mac can see, then exit. Use it if the Push isn't found |
 | `./venv/bin/python push2_pad_fix.py --reset` | Send Live's own threshold values (33/31) once, then exit. Undoes `--t0` |
@@ -56,6 +57,7 @@ Press **Ctrl+C** to stop. Stopping doesn't undo anything on the Push; the last s
 | Option | Default | Meaning |
 |---|---|---|
 | `--setting 0\|1\|2` | `0` | Pad preset: 0 regular (most sensitive), 1 reduced, 2 low |
+| `--protect` | off | Step each pad down one preset from what Live set, instead of forcing all pads to regular. Can't be combined with `--setting` |
 | `--monitor` | off | Print each pad note-on (pad number, position and velocity); other touches are labeled `NOT A PAD` |
 | `--list` | | Show MIDI ports and exit |
 | `--reset` | | Send Live's threshold values once and exit |
@@ -68,6 +70,22 @@ Press **Ctrl+C** to stop. Stopping doesn't undo anything on the Push; the last s
 | `--in NAME` | `Push 2 Live Port` | Part of the MIDI input port name to listen on |
 
 Options combine, for example `--t0 20 --monitor`. All values are 0-4095 except where noted.
+
+### Protect mode (`--protect`)
+
+By default the app forces **every** pad to "regular", which also removes Live's protection on pads that shouldn't fire by accident (like the loop selector). Reading Live's own Push 2 script, its stock presets are:
+
+| Pads | Stock preset |
+|---|---|
+| Drum and instrument playing pads | regular |
+| Loop selector pads | low |
+| All other pads (Session, sequencer, etc.) | reduced |
+
+Push 2 only has these three presets, so `--protect` steps each pad down one: low becomes reduced, and reduced becomes regular. Loop selector pads stay less sensitive than your playing pads, but not as stiff as stock. It reads each pad's current preset every few seconds and after mode changes, and remembers what it wrote so it never steps a pad down twice.
+
+    ./venv/bin/python push2_pad_fix.py --protect
+
+It prints each change, e.g. `pad row 8 col 1: low -> reduced`. A pad that Live moves from loop selector to a normal mode may stay one step above regular until the next time Live sets it.
 
 ### Reading `--monitor` output
 
@@ -94,6 +112,7 @@ Live re-sends its own values when you change Sensitivity, Gain or Dynamics on th
 
 ### How it works
 
+- With `--protect`, it first reads each pad's preset with "Get Selected Pad Settings" (`0x29`), then sets it one step lower per pad.
 - On start, after mode-change messages from the Push, and on a timer, it sends the documented "Select Pad Settings" sysex (command `0x28`) for all pads.
 - With `--t0`, it also sends "Set Pad Parameters" (command `0x1B`).
 - Reference: [Ableton's Push 2 MIDI and Display Interface](https://github.com/Ableton/push-interface/blob/main/doc/AbletonPush2MIDIDisplayInterface.asc).

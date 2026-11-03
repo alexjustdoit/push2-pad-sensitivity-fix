@@ -18,6 +18,7 @@ import mido
 SYSEX_HEADER = [0x00, 0x21, 0x1D, 0x01, 0x01]  # Ableton ID + Push 2 + device
 SELECT_PAD_SETTINGS = 0x28
 SET_PAD_PARAMETERS = 0x1B
+GET_PAD_SETTINGS = 0x29
 # Values Live's own Push 2 script sends (Push2/pad_velocity_curve.py): t0/t1 are
 # hardcoded, the aftertouch range depends on Live's Sensitivity (this is index 5).
 LIVE_T0, LIVE_T1 = 33, 31
@@ -51,6 +52,37 @@ def describe_note(msg):
     return f"  NOT A PAD: note {msg.note} (encoder or touch strip touch) value {msg.velocity}"
 
 
+def step_down_pads(out_port, in_port, written):
+    """Lower each pad one preset from what Live set (low->reduced, reduced->regular).
+
+    Reads every pad's current preset (0x29), then writes (0x28) one step lower. `written`
+    maps (scene, track) -> the value we last wrote, so a pad still holding our value is
+    left alone instead of being stepped down again. Returns the pads changed.
+    """
+    for _ in in_port.iter_pending():
+        pass  # drop stale messages
+    for scene in range(1, 9):
+        for track in range(1, 9):
+            out_port.send(mido.Message("sysex", data=SYSEX_HEADER + [GET_PAD_SETTINGS, scene, track]))
+    current, deadline = {}, time.monotonic() + 1.0
+    while len(current) < 64 and time.monotonic() < deadline:
+        for msg in in_port.iter_pending():
+            d = list(msg.data) if msg.type == "sysex" else []
+            if d[:6] == SYSEX_HEADER + [GET_PAD_SETTINGS] and len(d) == 9:
+                current[(d[6], d[7])] = d[8]
+        time.sleep(0.005)
+    changed = []
+    for pad, value in current.items():
+        if written.get(pad) == value:
+            continue
+        target = max(value - 1, 0)
+        if target != value:
+            out_port.send(mido.Message("sysex", data=SYSEX_HEADER + [SELECT_PAD_SETTINGS, pad[0], pad[1], target]))
+            changed.append((pad, value, target))
+        written[pad] = target
+    return changed
+
+
 def apply(out_port, setting, quiet=False):
     # scene 0, track 0 = all pads
     out_port.send(mido.Message("sysex", data=SYSEX_HEADER + [SELECT_PAD_SETTINGS, 0, 0, setting]))
@@ -62,6 +94,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--setting", type=int, choices=[0, 1, 2], default=0,
                     help="0=regular (most sensitive, default), 1=reduced, 2=low")
+    ap.add_argument("--protect", action="store_true",
+                    help="step each pad down one preset from what Live set (keeps loop-selector pads less "
+                         "sensitive than playing pads) instead of forcing all pads to regular")
     ap.add_argument("--out", default="Push 2 User Port", help="substring of the output port name")
     ap.add_argument("--in", dest="inp", default="Push 2 Live Port", help="substring of the input port name")
     ap.add_argument("--interval", type=float, default=5.0,
@@ -81,6 +116,9 @@ def main():
         print("Inputs:", *ins, sep="\n  ")
         return 0
 
+    if args.protect and args.setting != 0:
+        print("--protect and --setting can't be combined.", file=sys.stderr)
+        return 1
     if args.reset:
         args.t0, args.t1, args.cpmin, args.cpmax = LIVE_T0, LIVE_T1, LIVE_CPMIN, LIVE_CPMAX
     if args.t0 is not None:
@@ -96,12 +134,28 @@ def main():
         return 1
     print(f"Output: {out_name}\nInput:  {in_name or '(none; timer only)'}", flush=True)
 
+    written = {}
+    protect_in = None
+
     def apply_all(out_port, quiet=False):
-        apply(out_port, args.setting, quiet)
+        if args.protect:
+            for (scene, track), old, new in step_down_pads(out_port, protect_in, written):
+                if not quiet:
+                    print(f"[{time.strftime('%H:%M:%S')}] pad row {9 - scene} col {track}: "
+                          f"{LABELS[old]} -> {LABELS[new]}", flush=True)
+        else:
+            apply(out_port, args.setting, quiet)
         if args.t0 is not None:
             apply_thresholds(out_port, args.t0, args.t1, args.cpmin, args.cpmax)
             if not quiet:
                 print(f"[{time.strftime('%H:%M:%S')}] pad parameters -> t0={args.t0} t1={args.t1}", flush=True)
+
+    if args.protect:
+        reply_name = find_port(ins, args.out)
+        if not reply_name:
+            print(f"No input port matching '{args.out}' to read pad settings from.", file=sys.stderr)
+            return 1
+        protect_in = mido.open_input(reply_name)
 
     with mido.open_output(out_name) as out_port:
         if args.reset:
