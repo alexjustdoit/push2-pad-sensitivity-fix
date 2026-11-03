@@ -1,67 +1,51 @@
-# Push 2 Pad Sensitivity Fix for Ableton Live 12
+# Push 2 Pad Fix (macOS)
 
-This script fixes an issue with the Ableton Push 2 where pads require more pressure to trigger clips in **session mode** and **sequencer mode** compared to note mode.
+Keeps the pads on your Ableton Push 2 on their most sensitive setting, in every mode.
 
-## What it does
+**This version is for Mac.** Windows users should use the original project this was forked from: https://github.com/BenDS1984/push2-pad-sensitivity
 
-It runs in the background and listens for mode changes on the Push 2. Every time Ableton resets the pad sensitivity, the script immediately reapplies the more responsive setting.
+## The problem
 
-## Requirements
+Ableton Live can switch the Push 2 back to a stiffer pad setting when you change modes (for example into Session or Sequencer mode), so pads need more pressure than in Note mode. This app runs in the background and puts the setting back every time.
 
-- Ableton Live 12
-- Python 3.12 — download at [python.org](https://www.python.org/downloads/release/python-3120/) (check **"Add Python to PATH"** during installation)
-- Install the required library by running this command once in your terminal:
+## What you need
 
-```
-py -3.12 -m pip install mido
-```
+- A Mac with Ableton Live 12 and a Push 2 connected by USB
+- Python 3, a free download from https://www.python.org/downloads/ (if you're not sure you have it, the launcher below will tell you)
 
-## How to use
+## Install
 
-1. Download `push2_sensitivity.py` and `Start_Push2_Sensitivity.bat` and place them in the same folder
-2. Open Ableton Live
-3. Double-click `Start_Push2_Sensitivity.bat` — a small window will appear in the background
-4. That's it! Keep the window open while using Ableton
+1. On this page, click the green **Code** button, then **Download ZIP**.
+2. Open the downloaded ZIP to unpack it, and move the folder somewhere permanent, like Documents.
 
-## Note
+## Use
 
-The script is set up for a specific MIDI port configuration (output index 1, input index 0). If it doesn't work for you, you may need to adjust the `OUT_PORT_INDEX` and `IN_PORT_INDEX` values at the top of `push2_sensitivity.py`.
+1. Open Ableton Live with your Push 2 connected.
+2. In the folder, double-click **Start_Push2_Fix.command**.
+   - The first time, macOS may say it can't be opened. Right-click the file, choose **Open**, then **Open** again.
+   - The first run sets itself up, which takes about a minute.
+3. A Terminal window opens and prints that it applied the "regular" setting. **Leave it open** while you use Ableton. Close the window to stop it.
 
-To find the correct index for your setup, run this in your terminal:
+## Troubleshooting
 
-```python
-import mido
-print(mido.get_output_names())
-print(mido.get_input_names())
-```
+- **"No output port matching 'Push 2 User Port'"**: the Push 2 isn't connected or isn't powered on.
+- **Pads still feel stiff in every mode**: this app can only hold the "regular" setting, the most sensitive of the three that Push 2 offers. See the experimental section below.
 
 ---
 
-*Created with the help of AI ([Claude](https://claude.ai) by Anthropic).*
+## Experimental: trigger on a lighter touch
 
----
+*Optional and for people comfortable in Terminal. This is untested and may not work.*
 
-## macOS version (`push2_pad_fix.py`)
+Live's own Push 2 script sends two hardcoded values (`33` and `31`) in a pad parameter command that Ableton's docs label "unused". They may control how light a touch triggers a pad. This app can override them:
 
-A reworked version for macOS (also works on Windows/Linux) that finds the Push 2 MIDI ports by name instead of by index, applies the setting to all pads, and also re-applies it on a timer.
-
-    python3 -m venv venv
-    ./venv/bin/pip install -r requirements.txt
-    ./venv/bin/python push2_pad_fix.py            # keep pads on "regular"
-    ./venv/bin/python push2_pad_fix.py --list     # show MIDI ports
-
-**Limits:** only documented sysex is used. The Push 2 interface doc has no command for the note-on threshold itself. "Select Pad Settings" (0x28) has three presets, and "regular" is already the most sensitive. If pads are still stiff on "regular" in every mode, this can't fix it.
-
-## Experimental: lowering the trigger threshold
-
-Findings from reading Live 12's own Push 2 script (`MIDI Remote Scripts/Push2/pad_velocity_curve.py`, `sysex.py`):
-
-- Sensitivity, Gain and Dynamics only shape the velocity curve and the aftertouch range. They don't change what triggers a pad.
-- Live sends "Set Pad Parameters" (0x1B) with `t0=33`, `t1=31`, hardcoded for every setting. The interface doc marks both "unused". They look like a press/release threshold pair, but that is **unverified**.
-
-`--t0`/`--t1` override them. Live re-sends its own values when you change Sensitivity/Gain/Dynamics or reconnect, so keep the script running.
-
-    ./venv/bin/python push2_pad_fix.py --t0 20 --monitor    # lighter? (t1 defaults to t0-2)
+    ./venv/bin/python push2_pad_fix.py --t0 20 --monitor    # t1 defaults to t0 minus 2; --monitor prints each pad hit
     ./venv/bin/python push2_pad_fix.py --reset              # back to Live's 33/31
 
-If pads stick, run `--reset` or power-cycle the Push. `--cpmin`/`--cpmax` default to Live's values for its middle Sensitivity index (1220/1570) and are resent with `--t0`.
+Try a very light tap. If it triggers more easily, lower `--t0` further until pads start sticking or firing by themselves, then back off. If pads stick, run `--reset` or power-cycle the Push. Live re-sends its own values when you change Sensitivity, Gain or Dynamics on the Push, so keep the app running.
+
+Other options: `--list` shows MIDI ports, `--setting 1` or `2` picks a less sensitive preset, `--interval` sets how often it re-applies (seconds, 0 disables), and `--cpmin` / `--cpmax` set the aftertouch range sent with `--t0` (defaults match Live's middle Sensitivity).
+
+## Credits
+
+Based on [BenDS1984/push2-pad-sensitivity](https://github.com/BenDS1984/push2-pad-sensitivity), reworked for macOS. Created with the help of AI ([Claude](https://claude.ai) by Anthropic).
