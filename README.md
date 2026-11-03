@@ -38,3 +38,16 @@ print(mido.get_input_names())
 ---
 
 *Created with the help of AI ([Claude](https://claude.ai) by Anthropic).*
+
+---
+
+## macOS version (`push2_pad_fix.py`)
+
+A reworked version for macOS (also works on Windows/Linux) that finds the Push 2 MIDI ports by name instead of by index, applies the setting to all pads, and also re-applies it on a timer.
+
+    python3 -m venv venv
+    ./venv/bin/pip install -r requirements.txt
+    ./venv/bin/python push2_pad_fix.py            # keep pads on "regular"
+    ./venv/bin/python push2_pad_fix.py --list     # show MIDI ports
+
+**Limits:** only documented sysex is used. The Push 2 interface doc has no command for the note-on threshold itself. "Select Pad Settings" (0x28) has three presets, and "regular" is already the most sensitive. If pads are still stiff on "regular" in every mode, this can't fix it.
