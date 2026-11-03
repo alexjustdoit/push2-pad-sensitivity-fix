@@ -61,7 +61,7 @@ Stopping the app doesn't undo anything on the Push. The last presets stay until 
 ## Troubleshooting
 
 - **"No output port matching 'Push 2 User Port'"**: the Push 2 isn't connected or isn't powered on.
-- **Pads still feel stiff in every mode**: this app can only change the preset, and "regular" is the most sensitive one Push 2 has. Pads that feel stiff even on regular are down to the pad hardware, which this app can't change.
+- **Pads still feel stiff in every mode**: this app can only change the preset, and "regular" is the most sensitive one Push 2 has. Pads that feel stiff even on regular are down to the pad hardware, which this app can't change. Take apart your Push and clean the conductive sheet between the pads and the PCB.
 
 ---
 
