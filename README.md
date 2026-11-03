@@ -69,6 +69,17 @@ Press **Ctrl+C** to stop. Stopping doesn't undo anything on the Push; the last s
 
 Options combine, for example `--t0 20 --monitor`. All values are 0-4095 except where noted.
 
+### Reading `--monitor` output
+
+Not every line is a pad you pressed. If you see pads you didn't hit:
+
+- **`NOT A PAD` lines** are note messages from touching an encoder or the touch strip, which the Push sends the same way as pads. Pads are notes 36-99; anything else is something else. These are normal.
+- **Very low velocities (1-5)** are real but usually inaudible, so a pad can show up here without making sound.
+- **Neighboring pads** can pick up a light touch when you press the pad next to them, which shows up as a low velocity.
+- **A low `--t0`** makes ghost triggers more likely. If they appear while testing it, run `--reset` and check whether they stop.
+
+The app only prints messages the Push actually sends; it doesn't create or guess at hits.
+
 ### Experimental: trigger on a lighter touch
 
 *Untested and may not work.*
