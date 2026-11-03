@@ -51,3 +51,17 @@ A reworked version for macOS (also works on Windows/Linux) that finds the Push 2
     ./venv/bin/python push2_pad_fix.py --list     # show MIDI ports
 
 **Limits:** only documented sysex is used. The Push 2 interface doc has no command for the note-on threshold itself. "Select Pad Settings" (0x28) has three presets, and "regular" is already the most sensitive. If pads are still stiff on "regular" in every mode, this can't fix it.
+
+## Experimental: lowering the trigger threshold
+
+Findings from reading Live 12's own Push 2 script (`MIDI Remote Scripts/Push2/pad_velocity_curve.py`, `sysex.py`):
+
+- Sensitivity, Gain and Dynamics only shape the velocity curve and the aftertouch range. They don't change what triggers a pad.
+- Live sends "Set Pad Parameters" (0x1B) with `t0=33`, `t1=31`, hardcoded for every setting. The interface doc marks both "unused". They look like a press/release threshold pair, but that is **unverified**.
+
+`--t0`/`--t1` override them. Live re-sends its own values when you change Sensitivity/Gain/Dynamics or reconnect, so keep the script running.
+
+    ./venv/bin/python push2_pad_fix.py --t0 20 --monitor    # lighter? (t1 defaults to t0-2)
+    ./venv/bin/python push2_pad_fix.py --reset              # back to Live's 33/31
+
+If pads stick, run `--reset` or power-cycle the Push. `--cpmin`/`--cpmax` default to Live's values for its middle Sensitivity index (1220/1570) and are resent with `--t0`.
