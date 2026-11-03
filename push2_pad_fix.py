@@ -52,13 +52,8 @@ def describe_note(msg):
     return f"  NOT A PAD: note {msg.note} (encoder or touch strip touch) value {msg.velocity}"
 
 
-def step_down_pads(out_port, in_port, written):
-    """Lower each pad one preset from what Live set (low->reduced, reduced->regular).
-
-    Reads every pad's current preset (0x29), then writes (0x28) one step lower. `written`
-    maps (scene, track) -> the value we last wrote, so a pad still holding our value is
-    left alone instead of being stepped down again. Returns the pads changed.
-    """
+def read_pad_presets(out_port, in_port):
+    """Return {(scene, track): preset} for all 64 pads (scene 1 = top row, track 1 = left)."""
     for _ in in_port.iter_pending():
         pass  # drop stale messages
     for scene in range(1, 9):
@@ -71,6 +66,17 @@ def step_down_pads(out_port, in_port, written):
             if d[:6] == SYSEX_HEADER + [GET_PAD_SETTINGS] and len(d) == 9:
                 current[(d[6], d[7])] = d[8]
         time.sleep(0.005)
+    return current
+
+
+def step_down_pads(out_port, in_port, written):
+    """Lower each pad one preset from what Live set (low->reduced, reduced->regular).
+
+    Reads every pad's current preset (0x29), then writes (0x28) one step lower. `written`
+    maps (scene, track) -> the value we last wrote, so a pad still holding our value is
+    left alone instead of being stepped down again. Returns the pads changed.
+    """
+    current = read_pad_presets(out_port, in_port)
     changed = []
     for pad, value in current.items():
         if written.get(pad) == value:
@@ -97,6 +103,8 @@ def main():
     ap.add_argument("--protect", action="store_true",
                     help="step each pad down one preset from what Live set (keeps loop-selector pads less "
                          "sensitive than playing pads) instead of forcing all pads to regular")
+    ap.add_argument("--dump", action="store_true",
+                    help="print the current preset of every pad as a grid (0=regular 1=reduced 2=low) and exit")
     ap.add_argument("--out", default="Push 2 User Port", help="substring of the output port name")
     ap.add_argument("--in", dest="inp", default="Push 2 Live Port", help="substring of the input port name")
     ap.add_argument("--interval", type=float, default=5.0,
@@ -149,6 +157,20 @@ def main():
             apply_thresholds(out_port, args.t0, args.t1, args.cpmin, args.cpmax)
             if not quiet:
                 print(f"[{time.strftime('%H:%M:%S')}] pad parameters -> t0={args.t0} t1={args.t1}", flush=True)
+
+    if args.dump:
+        reply_name = find_port(ins, args.out)
+        if not (out_name and reply_name):
+            print(f"No Push 2 ports matching '{args.out}'. Is Push 2 connected? Try --list.", file=sys.stderr)
+            return 1
+        with mido.open_output(out_name) as out_port, mido.open_input(reply_name) as in_port:
+            presets = read_pad_presets(out_port, in_port)
+        if len(presets) < 64:
+            print(f"Only {len(presets)}/64 pads answered.", file=sys.stderr)
+        print("Pad presets (0=regular 1=reduced 2=low, ?=no answer), top row first:")
+        for scene in range(1, 9):
+            print("  " + " ".join(str(presets.get((scene, t), "?")) for t in range(1, 9)))
+        return 0
 
     if args.protect:
         reply_name = find_port(ins, args.out)

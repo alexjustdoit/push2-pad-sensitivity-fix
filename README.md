@@ -47,7 +47,8 @@ Press **Ctrl+C** to stop. Stopping doesn't undo anything on the Push; the last s
 | Command | What it does |
 |---|---|
 | `./venv/bin/python push2_pad_fix.py` | Normal use: hold all pads on "regular" |
-| `./venv/bin/python push2_pad_fix.py --protect` | Keep Live's protection on pads that shouldn't fire by accident, but make everything one step more sensitive than stock (see below) |
+| `./venv/bin/python push2_pad_fix.py --protect` | Keep some protection on Session and sequencer/loop pads, but one step more sensitive than stock (see below) |
+| `./venv/bin/python push2_pad_fix.py --dump` | Print a grid of every pad's current preset and exit |
 | `./venv/bin/python push2_pad_fix.py --monitor` | Live readout in Terminal of every pad hit, e.g. `pad 36 (row 1 from bottom, col 1) velocity 18` (velocity 1-127). Handy for seeing how light a touch registers. Touching an encoder or the touch strip also sends a note, shown as `NOT A PAD`. Very low velocities (1-5) can be inaudible, so a pad may show up here without making sound |
 | `./venv/bin/python push2_pad_fix.py --list` | List the MIDI ports the Mac can see, then exit. Use it if the Push isn't found |
 | `./venv/bin/python push2_pad_fix.py --reset` | Send Live's own threshold values (33/31) once, then exit. Undoes `--t0` |
@@ -58,6 +59,7 @@ Press **Ctrl+C** to stop. Stopping doesn't undo anything on the Push; the last s
 |---|---|---|
 | `--setting 0\|1\|2` | `0` | Pad preset: 0 regular (most sensitive), 1 reduced, 2 low |
 | `--protect` | off | Step each pad down one preset from what Live set, instead of forcing all pads to regular. Can't be combined with `--setting` |
+| `--dump` | | Print each pad's current preset as a grid and exit |
 | `--monitor` | off | Print each pad note-on (pad number, position and velocity); other touches are labeled `NOT A PAD` |
 | `--list` | | Show MIDI ports and exit |
 | `--reset` | | Send Live's threshold values once and exit |
@@ -73,19 +75,23 @@ Options combine, for example `--t0 20 --monitor`. All values are 0-4095 except w
 
 ### Protect mode (`--protect`)
 
-By default the app forces **every** pad to "regular", which also removes Live's protection on pads that shouldn't fire by accident (like the loop selector). Reading Live's own Push 2 script, its stock presets are:
+By default the app forces **every** pad to "regular", which also removes Live's protection on pads that shouldn't fire by accident. Reading each pad's preset with `--dump` on a Push 2 running Live 12 showed Live's stock presets are:
 
 | Pads | Stock preset |
 |---|---|
-| Drum and instrument playing pads | regular |
-| Loop selector pads | low |
-| All other pads (Session, sequencer, etc.) | reduced |
+| Drum and instrument playing pads (including the 64-note layout) | regular (0) |
+| Drum step sequencer / loop selector areas | low (2) |
+| Session mode (all 64 pads) | low (2) |
 
-Push 2 only has these three presets, so `--protect` steps each pad down one: low becomes reduced, and reduced becomes regular. Loop selector pads stay less sensitive than your playing pads, but not as stiff as stock. It reads each pad's current preset every few seconds and after mode changes, and remembers what it wrote so it never steps a pad down twice.
+No pad read as "reduced" (1) in the modes tested (drum, instrument, Session).
+
+Push 2 only has three presets, so `--protect` steps each pad down one: low becomes reduced, and regular stays regular. Playing pads stay regular, while Session and sequencer/loop pads go from low to reduced. They stay stiffer than playing pads, but not as stiff as stock. It reads each pad's current preset every few seconds and after mode changes, and remembers what it wrote so it never steps a pad down twice.
 
     ./venv/bin/python push2_pad_fix.py --protect
 
-It prints each change, e.g. `pad row 8 col 1: low -> reduced`. A pad that Live moves from loop selector to a normal mode may stay one step above regular until the next time Live sets it.
+It prints each change, e.g. `pad row 8 col 1: low -> reduced`.
+
+To see what Live sets in a given mode, switch modes on the Push and run `./venv/bin/python push2_pad_fix.py --dump` (with the app stopped). It prints an 8x8 grid, top row first, of each pad's preset (0 regular, 1 reduced, 2 low).
 
 ### Reading `--monitor` output
 
